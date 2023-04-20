@@ -2,51 +2,48 @@ package com.eg.swa.order.controller;
 
 import java.util.List;
 
+import com.eg.swa.order.dto.OrderDto;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import com.eg.swa.order.dto.OrderItemDto;
-import com.eg.swa.order.model.Order;
+
 import com.eg.swa.order.service.OrderService;
 
+@RequiredArgsConstructor
+
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping("/api/order")
 public class OrderController {
     private final OrderService orderService;
 
-    public OrderController(OrderService orderService) {
-        this.orderService = orderService;
-    }
-
     @GetMapping
-    public List<Order> getAllOrders() {
-        return orderService.getAllOrders();
+    public ResponseEntity<List<OrderDto>> get() {
+        return ResponseEntity.ok(orderService.getAll());
     }
 
     @GetMapping("/{id}")
-    public Order getOrderById(@PathVariable Long id) throws NotFoundException {
-        return orderService.getOrderById(id);
+    public ResponseEntity<OrderDto> get(@PathVariable Long id) throws NotFoundException {
+        return ResponseEntity.ok(orderService.get(id));
     }
 
-    @PostMapping("/create")
-    public ResponseEntity<Order> createOrder(@RequestBody List<OrderItemDto> orderItems, Long customerId) throws Exception {
-//        Customer customer = (Customer) authentication.getPrincipal();
-        Order order = orderService.createOrder(customerId, orderItems);
-        return new ResponseEntity<>(order, HttpStatus.CREATED);
+    @PostMapping
+    public ResponseEntity<OrderDto> create(@RequestBody OrderDto orderDto) throws Exception {
+    //        Customer customer = (Customer) authentication.getPrincipal();
+//
+        return new ResponseEntity<>(orderService.create(orderDto), HttpStatus.CREATED);
     }
-    
-    // Need to add cancelOrder function
+
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<Boolean> cancel(@PathVariable("id") Long id) throws Exception{
+        orderService.cancel(id);
+        return ResponseEntity.ok(Boolean.TRUE);
+    }
 
     @DeleteMapping("/{id}")
-    public void deleteOrder(@PathVariable Long id) {
+    public void delete(@PathVariable Long id) {
         orderService.deleteOrder(id);
     }
 }

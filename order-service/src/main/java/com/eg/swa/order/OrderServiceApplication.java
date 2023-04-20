@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @SpringBootApplication
 @EntityScan(basePackages = {"com.eg.swa.order.*" , "com.eg.swa.product.*"})
 @EnableJpaRepositories(basePackages = {"com.eg.swa.order.repository" , "com.eg.swa.product.repository"})
-@ComponentScan("com.eg.swa.product")
+@ComponentScan({"com.eg.swa.product", "com.eg.swa.order"})
 public class OrderServiceApplication {
 
 	public static void main(String[] args) {

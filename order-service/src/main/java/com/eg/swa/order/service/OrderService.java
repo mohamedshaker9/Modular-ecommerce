@@ -1,109 +1,114 @@
 package com.eg.swa.order.service;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import com.eg.swa.order.dto.OrderDto;
+import com.eg.swa.order.mapper.OrderItemMapper;
+import com.eg.swa.order.mapper.OrderMapper;
+import com.eg.swa.order.model.Order;
+import com.eg.swa.order.model.OrderItem;
+import com.eg.swa.product.dto.ProductDto;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.eg.swa.order.dto.OrderItemDto;
 import com.eg.swa.order.model.Customer;
-import com.eg.swa.order.model.Order;
-import com.eg.swa.order.model.OrderItem;
 import com.eg.swa.order.model.OrderStatus;
 import com.eg.swa.order.repository.OrderRepository;
 import com.eg.swa.product.model.Product;
 import com.eg.swa.product.repository.ProductRepository;
 import com.eg.swa.product.service.ProductService;
 
+@RequiredArgsConstructor
 
 @Service
 @Transactional
 public class OrderService {
 
-	@Autowired
-	private OrderRepository orderRepository;
-	@Autowired
-	private ProductRepository productRepository;
-	
-	@Autowired
-	private ProductService productService;
+    private final OrderRepository orderRepository;
+    private final ProductRepository productRepository;
+    private final ProductService productService;
 
-//	public OrderService(OrderRepository orderRepository, ProductRepository productRepository,
-//			ProductService productService) {
-//		this.orderRepository = orderRepository;
-//		this.productRepository = productRepository;
-//		this.productService = productService;
-//	}
+    private final OrderMapper orderMapper;
 
-	public List<Order> getAllOrders() {
-		return orderRepository.findAll();
-	}
+    private final OrderItemMapper orderItemMapper;
 
-	public List<Order> getOrdersForCustomer(Customer customer) {
-		return orderRepository.findByCustomer(customer);
-	}
+    public List<OrderDto> getAll() {
+        return orderMapper.map(orderRepository.findAll());
+    }
 
-	public Order getOrderById(Long id) throws NotFoundException {
-		return orderRepository.findById(id).orElseThrow(() -> new NotFoundException());
-	}
+    public List<OrderDto> getCustomerOrders(Customer customer) {
+        return orderMapper.map(orderRepository.findByCustomer(customer));
+    }
 
-	public Order createOrder(Long customerId, List<OrderItemDto> orderItems) throws Exception {
-		Order order = new Order();
+    public OrderDto get(Long id) throws NotFoundException {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException());
+        return orderMapper.map(order);
+    }
 
-		Customer customer = new Customer();
-		customer.setId(customerId);
+    public OrderDto create(OrderDto orderDto) throws Exception {
+        Map<Long, Integer> productQuantities = convertProductQuantitiesMap(orderDto.getOrderItems());
 
-		order.setCustomer(customer);
-		order.setOrderDate(LocalDateTime.now());
-		order.setOrderStatus(OrderStatus.CREATED);
+        if (!productService.isAllAvailableQuantity(productQuantities)) {
+            throw new Exception("Insufficient Product Quantity");
+        }
 
-		List<OrderItem> items = new ArrayList<>();
-		for (OrderItemDto itemDto : orderItems) {
-			
-			Product product = productRepository.getReferenceById(itemDto.getProductId());
-			
-			// check if product is available in sufficient quantity
-			if (product.getQuantity() < itemDto.getQuantity()) {
-				throw new Exception("Insufficient Product Quantity");
-			}
+        productService.decreaseQuantities(productQuantities);
 
-			// update product quantity
-			product.setQuantity(product.getQuantity() - itemDto.getQuantity());
-			productService.updateProduct(product);
+        Order savedOrder = orderRepository.save(createOrderObject(orderDto));
 
-			// Create order item and add to items list
-			OrderItem item = new OrderItem();
-			item.setOrder(order);
-			item.setProduct(product);
-			item.setQuantity(itemDto.getQuantity());
-			item.setPrice(itemDto.getPrice());
-			items.add(item);
-		}
-		order.setOrderItems(items);
-		return orderRepository.save(order);
-	}
+        return orderMapper.map(savedOrder);
+    }
 
-	public void cancelOrder(Order order) throws Exception {
-		if (order.getOrderStatus() != OrderStatus.CREATED) {
-			throw new Exception("Order Cannot Be Cancelled");
-		}
+    public void cancel(long id) throws Exception {
+        Order order = orderRepository.findById(id).get();
 
-		// restore product quantities
-		for (OrderItem item : order.getOrderItems()) {
-			Product product = item.getProduct();
-			product.setQuantity(product.getQuantity() + item.getQuantity());
-			productService.updateProduct(product);
-		}
+        if (order.getOrderStatus() != OrderStatus.CREATED) {
+            throw new Exception("Order Cannot Be Cancelled");
+        }
 
-		order.setOrderStatus(OrderStatus.CANCELLED);
-		orderRepository.save(order);
-	}
+        Map<Long, Integer> productQuantities = order.getOrderItems().stream()
+                .collect(Collectors
+                        .toMap(
+                                orderItem -> orderItem.getProduct().getId(),
+                                OrderItem::getQuantity));
 
-	public void deleteOrder(Long id) {
-		orderRepository.deleteById(id);
-	}
+        productService.increaseQuantities(productQuantities);
+
+        order.setOrderStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+    }
+
+
+    private Map<Long, Integer> convertProductQuantitiesMap(List<OrderItemDto> orderItemDtos) {
+        return orderItemDtos.stream()
+                .collect(Collectors.toMap(OrderItemDto::getProductId, OrderItemDto::getQuantity));
+    }
+
+    private Order createOrderObject(OrderDto orderDto) {
+        Order order = orderMapper.map(orderDto);
+        order.setOrderStatus(OrderStatus.CREATED);
+
+        List<OrderItem> orderItems = orderDto.getOrderItems().stream()
+                .map(orderItemDto -> {
+                    OrderItem orderItem = orderItemMapper.map(orderItemDto);
+                    orderItem.setOrder(order);
+                    return orderItem;
+                })
+                .collect(Collectors.toList());
+
+        order.setOrderItems(orderItems);
+
+        return order;
+    }
+
+
+    public void deleteOrder(Long id) {
+        orderRepository.deleteById(id);
+    }
 }

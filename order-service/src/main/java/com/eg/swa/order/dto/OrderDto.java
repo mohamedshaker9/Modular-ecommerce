@@ -1,19 +1,21 @@
 package com.eg.swa.order.dto;
 
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
 @Builder
-public class OrderItemDto {
-	private Long productId;
-	private BigDecimal price;
-    private Integer quantity;
+public class OrderDto {
+    private long customerId;
+    private List<OrderItemDto> orderItems;
+    private double total;
+    private String status;
 
 }
