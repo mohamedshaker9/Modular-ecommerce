@@ -1,16 +1,16 @@
 package com.eg.swa.order.controller;
 
-import java.util.List;
-
 import com.eg.swa.order.dto.OrderDto;
+import com.eg.swa.order.service.OrderService;
+import com.eg.swa.security.model.Customer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-
-import com.eg.swa.order.service.OrderService;
+import java.util.List;
 
 @RequiredArgsConstructor
 
@@ -21,7 +21,7 @@ public class OrderController {
 
     @GetMapping
     public ResponseEntity<List<OrderDto>> get() {
-        return ResponseEntity.ok(orderService.getAll());
+        return ResponseEntity.ok(orderService.get());
     }
 
     @GetMapping("/{id}")
@@ -31,8 +31,8 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<OrderDto> create(@RequestBody OrderDto orderDto) throws Exception {
-    //        Customer customer = (Customer) authentication.getPrincipal();
-//
+        Customer customer = (Customer) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        orderDto.setCustomerId(customer.getId());
         return new ResponseEntity<>(orderService.create(orderDto), HttpStatus.CREATED);
     }
 

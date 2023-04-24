@@ -1,27 +1,24 @@
 package com.eg.swa.order.service;
 
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 import com.eg.swa.order.dto.OrderDto;
+import com.eg.swa.order.dto.OrderItemDto;
 import com.eg.swa.order.mapper.OrderItemMapper;
 import com.eg.swa.order.mapper.OrderMapper;
 import com.eg.swa.order.model.Order;
 import com.eg.swa.order.model.OrderItem;
-import com.eg.swa.product.dto.ProductDto;
+import com.eg.swa.order.model.OrderStatus;
+import com.eg.swa.order.repository.OrderRepository;
+import com.eg.swa.product.repository.ProductRepository;
+import com.eg.swa.product.service.ProductService;
+import com.eg.swa.security.model.Customer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.eg.swa.order.dto.OrderItemDto;
-import com.eg.swa.order.model.Customer;
-import com.eg.swa.order.model.OrderStatus;
-import com.eg.swa.order.repository.OrderRepository;
-import com.eg.swa.product.model.Product;
-import com.eg.swa.product.repository.ProductRepository;
-import com.eg.swa.product.service.ProductService;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 
@@ -37,7 +34,7 @@ public class OrderService {
 
     private final OrderItemMapper orderItemMapper;
 
-    public List<OrderDto> getAll() {
+    public List<OrderDto> get() {
         return orderMapper.map(orderRepository.findAll());
     }
 
