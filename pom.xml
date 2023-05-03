@@ -15,6 +15,7 @@
   <modules>
 	  <module>product-service</module>
 	  <module>order-service</module>
+      <module>cart-service</module>
 	  <module>shared-lib</module>
       <module>security-service</module>
   </modules>
